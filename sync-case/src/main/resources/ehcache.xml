@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ehcache xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="ehcache.xsd">
+
+    <diskStore path="user.dir"/>
+
+    <!--
+        java.io.tmpdir  临时目录
+     DiskStore 配置，cache文件的存放目录 ，主要的值有
+    * user.home - 用户主目录
+    * user.dir - 用户当前的工作目录
+    * java.io.tmpdir - Default temp file path默认的temp文件目录
+    -->
+
+    <!--
+       defaultCache:默认的缓存配置信息,如果不加特殊说明,则所有对象按照此配置项处理
+       maxElementsInMemory:设置了缓存的上限,最多存储多少个记录对象
+       eternal:代表对象是否永不过期
+       timeToIdleSeconds:最大的发呆时间
+       timeToLiveSeconds:最大的存活时间
+       overflowToDisk:是否允许对象被写入到磁盘
+
+    -->
+
+    <defaultCache maxElementsInMemory="10000" eternal="false"
+                  timeToIdleSeconds="120" timeToLiveSeconds="120" diskSpoolBufferSizeMB="30"
+                  maxElementsOnDisk="10000000" diskExpiryThreadIntervalSeconds="120">
+    </defaultCache>
+    <cache name="test1" maxElementsInMemory="100" maxElementsOnDisk="0"
+           eternal="false" timeToIdleSeconds="120" timeToLiveSeconds="0">
+        <cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory"
+                                   properties="replicateAsynchronously=true,replicatePuts=true, replicateUpdates=true, replicateUpdatesViaCopy=true, replicateRemovals=true "/>
+
+        # replicateUpdatesViaCopy 的设置建议为true，如果为false，那么第二次的put操作，将不会同步缓存
+    </cache>
+
+    <cache name="test2" maxElementsInMemory="100" maxElementsOnDisk="0"
+           eternal="false" timeToIdleSeconds="120" timeToLiveSeconds="0">
+        <cacheEventListenerFactory class="net.sf.ehcache.distribution.RMICacheReplicatorFactory"
+                                   properties="replicateAsynchronously=true,replicatePuts=true, replicateUpdates=true, replicateUpdatesViaCopy=true, replicateRemovals=true "/>
+
+        <bootstrapCacheLoaderFactory
+                class="net.sf.ehcache.distribution.RMIBootstrapCacheLoaderFactory"
+                properties="bootstrapAsynchronously=false"/>
+
+        # replicateUpdatesViaCopy 的设置建议为true，如果为false，那么第二次的put操作，将不会同步缓存
+    </cache>
+
+    <cacheManagerPeerProviderFactory
+            class="net.sf.ehcache.distribution.RMICacheManagerPeerProviderFactory"
+            properties="peerDiscovery=manual,
+        rmiUrls=//192.168.1.19:8082/test1|//192.168.1.19:8082/test2
+        |//192.168.1.19:8083/test1|//192.168.1.19:8083/test2"/>
+    #test1为上面配置的 也就是要同步的缓存 这里可以配置多
+
+    <!--<cacheManagerPeerProviderFactory
+            class="net.sf.ehcache.distribution.RMICacheManagerPeerProviderFactory"
+            properties="peerDiscovery=manual,
+        rmiUrls=//192.168.1.19:8083/test2"  />-->
+
+    #端口不能和tomcat重复 此端口为本服务器端口 必须未被占用
+    <cacheManagerPeerListenerFactory
+            class="net.sf.ehcache.distribution.RMICacheManagerPeerListenerFactory"
+            properties="hostName=192.168.1.19, port=8084, socketTimeoutMillis=2000 "/>
+
+
+</ehcache>
